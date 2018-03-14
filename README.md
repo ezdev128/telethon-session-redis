@@ -1,1 +1,0 @@
-# telethon-session-redis
