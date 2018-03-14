@@ -9,16 +9,17 @@ setuptools.setup(
     author_email="ezdev128@yandex.com",
 
     description="Redis backend for Telethon session storage",
-    long_description=open("README.rst").read(),
+    long_description=open("README.rst", encoding="utf-8").read(),
 
     packages=setuptools.find_packages(),
-
-    install_requires=[
-        "redis>=2.0",
-    ],
+    license="MIT",
 
     classifiers=[
+        #   3 - Alpha
+        #   4 - Beta
+        #   5 - Production/Stable
         "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
@@ -26,5 +27,12 @@ setuptools.setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
     ],
+    keywords="telegram session sessions redis",
     python_requires="~=3.4",
+
+    install_requires=[
+        "redis>=2.0",
+        "Telethon>=0.17"
+    ],
+
 )
