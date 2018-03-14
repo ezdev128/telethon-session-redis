@@ -4,6 +4,7 @@ setuptools.setup(
     name="telethon-session-redis",
     version="0.1.0",
     url="https://github.com/ezdev128/telethon-session-redis",
+    download_url="https://github.com/ezdev128/telethon-session-redis/releases",
 
     author="Konstantin M.",
     author_email="ezdev128@yandex.com",
