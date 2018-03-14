@@ -4,11 +4,14 @@ import setuptools
 import re
 
 with open("teleredis/__init__.py", encoding="utf-8") as f:
-    version = re.search(r"^__version__[\s\t=]*[\"']*([\d.+]+)[\"']*$",
+    version = re.search(r"^__version__[\s\t=]*[\"']*([\w\d.\-_+]+)[\"']*$",
                         f.read(), re.M).group(1)
 
+package_name = "teleredis"
+
 setuptools.setup(
-    name="teleredis",
+    name=package_name,
+    packages=[package_name],
     version=version,
 
     url="https://github.com/ezdev128/telethon-session-redis",
@@ -20,7 +23,7 @@ setuptools.setup(
     description="Redis backend for Telethon session storage",
     long_description=open("README.rst", encoding="utf-8").read(),
 
-    packages=setuptools.find_packages(exclude=["telerediss/__pycache__"]),
+
     license="MIT",
 
     classifiers=[

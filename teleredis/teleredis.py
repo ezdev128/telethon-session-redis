@@ -11,11 +11,23 @@ import base64
 import time
 import redis
 import pickle
+from enum import Enum
 
-TS_STR_FORMAT = "%F %T"
-HIVE_PREFIX = "telethon:client"
-PACK_FUNC = "json"
-UNPACK_FUNC = "json"
+
+class PackFunction(Enum):
+    JSON = 0
+    PICKLE = 1
+
+
+class UnpackFunction(Enum):
+    JSON = 0
+    PICKLE = 1
+
+
+DEFAULT_TS_STR_FORMAT = "%F %T"
+DEFAULT_HIVE_PREFIX = "telethon:client"
+DEFAULT_PACK_FUNC = PackFunction.JSON
+DEFAULT_UNPACK_FUNC = UnpackFunction.JSON
 
 
 __log__ = logging.getLogger(__name__)
@@ -27,12 +39,15 @@ class RedisSession(MemorySession):
     redis_connection = None
     hive_prefix = None
     sess_prefix = None
+    use_indents = True
+    add_timestamps = False
+    ts_format = None
     pack_func = None
     unpack_func = None
-    use_indents = True
 
     def __init__(self, session_name=None, redis_connection=None, hive_prefix=None,
-                 pack_func=PACK_FUNC, unpack_func=UNPACK_FUNC):
+                 use_indents=False, add_timestamps=False, ts_format=None,
+                 pack_func=None, unpack_func=None):
         if not isinstance(session_name, (str, bytes)):
             raise TypeError("Session name must be a string or bytes.")
 
@@ -43,25 +58,24 @@ class RedisSession(MemorySession):
 
         self.session_name = session_name if isinstance(session_name, str) else session_name.decode()
         self.redis_connection = redis_connection
-
-        self.hive_prefix = hive_prefix or HIVE_PREFIX
-        self.pack_func = pack_func
-        self.unpack_func = unpack_func
-
+        self.hive_prefix = hive_prefix or DEFAULT_HIVE_PREFIX
+        self.use_indents = use_indents
+        self.add_timestamps = add_timestamps
+        self.ts_format = ts_format or DEFAULT_TS_STR_FORMAT
+        self.pack_func = pack_func or DEFAULT_PACK_FUNC
+        self.unpack_func = unpack_func or DEFAULT_UNPACK_FUNC
         self.sess_prefix = "{}:{}".format(self.hive_prefix, self.session_name)
-
         self.save_entities = True
-
         self.feed_session()
 
     def _pack(self, o, **kwargs):
-        if self.pack_func == "json":
+        if self.pack_func == PackFunction.JSON:
             if self.use_indents:
                 kwargs["indent"] = 2
-        return json.dumps(o, **kwargs) if self.pack_func == "json" else pickle.dumps(o, **kwargs)
+        return json.dumps(o, **kwargs) if self.pack_func == PackFunction.JSON else pickle.dumps(o, **kwargs)
 
     def _unpack(self, o, **kwargs):
-        return json.loads(o, **kwargs) if self.unpack_func == "json" else pickle.loads(o, **kwargs)
+        return json.loads(o, **kwargs) if self.unpack_func == UnpackFunction.JSON else pickle.loads(o, **kwargs)
 
     def feed_session(self):
         try:
@@ -98,9 +112,13 @@ class RedisSession(MemorySession):
             "server_address": self._server_address,
             "port": self._port,
             "auth_key": base64.standard_b64encode(auth_key).decode(),
-            "ts_ts": time.time(),
-            "ts_str": time.strftime(TS_STR_FORMAT, time.localtime()),
         }
+
+        if self.add_timestamps:
+            s.update({
+                "ts_ts": time.time(),
+                "ts_str": time.strftime(DEFAULT_TS_STR_FORMAT, time.localtime()),
+            })
 
         key = "{}:sessions:{}".format(self.sess_prefix, self._dc_id)
         try:
@@ -166,9 +184,14 @@ class RedisSession(MemorySession):
                 "username": rows[2],
                 "phone": rows[3],
                 "name": rows[4],
-                "ts_ts": time.time(),
-                "ts_str": time.strftime(TS_STR_FORMAT, time.localtime()),
             }
+
+            if self.add_timestamps:
+                s.update({
+                    "ts_ts": time.time(),
+                    "ts_str": time.strftime(DEFAULT_TS_STR_FORMAT, time.localtime()),
+                })
+
             self.redis_connection.set(key, self._pack(s))
         except Exception as ex:
             __log__.exception(ex.args)
@@ -283,9 +306,14 @@ class RedisSession(MemorySession):
             "type": _SentFileType.from_type(type(instance)).value,
             "id": instance.id,
             "hash": instance.access_hash,
-            "ts_ts": time.time(),
-            "ts_str": time.strftime(TS_STR_FORMAT, time.localtime()),
         }
+
+        if self.add_timestamps:
+            s.update({
+                "ts_ts": time.time(),
+                "ts_str": time.strftime(DEFAULT_TS_STR_FORMAT, time.localtime()),
+            })
+
         try:
             self.redis_connection.set(key, self._pack(s))
         except Exception as ex:
