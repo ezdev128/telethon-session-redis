@@ -15,7 +15,7 @@ Quick start
     .. code-block:: python
 
         from telethon import TelegramClient
-        from telethon.sessions.redis import RedisSession
+        from teleredis import RedisSession
         import redis
 
         # These example values won't work. You must get your own api_id and

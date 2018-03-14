@@ -1,5 +1,11 @@
 build/
 dist/
 *.egg-info/
+*.egg
 __pycache__/
-.idea
+*.py[cod]
+.installed.cfg
+.idea/
+*.pyc
+*.pyo
+*.log
