@@ -10,6 +10,15 @@ Usage
 This session implementation can store multiple Sessions in the same key hive.
 
 
+
+Installing
+----------
+
+    .. code-block:: sh
+
+        pip3 install teleredis
+
+
 Quick start
 -----------
     .. code-block:: python
