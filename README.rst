@@ -19,6 +19,14 @@ Installing
         pip3 install teleredis
 
 
+Upgrading
+----------
+
+    .. code-block:: sh
+
+        pip3 install -U teleredis
+
+
 Quick start
 -----------
     .. code-block:: python

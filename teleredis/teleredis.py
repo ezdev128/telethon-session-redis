@@ -75,7 +75,7 @@ class RedisSession(MemorySession):
         return json.dumps(o, **kwargs) if self.pack_func == PackFunction.JSON else pickle.dumps(o, **kwargs)
 
     def _unpack(self, o, **kwargs):
-        if self.unpack_func == PackFunction.JSON and isinstance(o, bytes):
+        if self.unpack_func == UnpackFunction.JSON and isinstance(o, bytes):
             o = o.decode()
         return json.loads(o, **kwargs) if self.unpack_func == UnpackFunction.JSON else pickle.loads(o, **kwargs)
 
