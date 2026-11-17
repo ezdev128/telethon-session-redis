@@ -1,0 +1,29 @@
+[project]
+name = "teleredis"
+dynamic = ["version"]
+description = "Redis session storage for Telethon"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Konstantin M." },
+]
+dependencies = [
+    "redis>=8.1.0",
+    "telethon>=1.31.0",
+]
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "teleredis/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["teleredis"]

@@ -64,7 +64,7 @@ class RedisSession(MemorySession):
         self.ts_format = ts_format or DEFAULT_TS_STR_FORMAT
         self.pack_func = pack_func or DEFAULT_PACK_FUNC
         self.unpack_func = unpack_func or DEFAULT_UNPACK_FUNC
-        self.sess_prefix = "{}:{}".format(self.hive_prefix, self.session_name)
+        self.sess_prefix = f"{self.hive_prefix}:{self.session_name}"
         self.save_entities = True
         self.feed_session()
 
@@ -80,26 +80,27 @@ class RedisSession(MemorySession):
         return json.loads(o, **kwargs) if self.unpack_func == UnpackFunction.JSON else pickle.loads(o, **kwargs)
 
     def feed_session(self):
-        try:
-            s = self._get_sessions()
-            if len(s) == 0:
-                self._auth_key = AuthKey(data=bytes())
-                return
+        dc_id = self.redis_connection.get(f"{self.sess_prefix}:active_dc")
+        if dc_id is None:
+            self._auth_key = AuthKey(data=bytes())
+            return
 
-            s = self.redis_connection.get(s[-1])
-            if not s:
-                # No sessions
-                self._auth_key = AuthKey(data=bytes())
-                return
+        dc_id = int(dc_id)
+        key = f"{self.sess_prefix}:sessions:{dc_id}"
+        s = self.redis_connection.get(key)
+        if s is None:
+            raise ValueError(
+                f"Active DC {dc_id} has no session record; repair the active_dc pointer "
+                "with scripts/migrate_active_dc.py before starting."
+            )
 
-            s = self._unpack(s)
-            self._dc_id = s["dc_id"]
-            self._server_address = s["server_address"]
-            self._port = s["port"]
-            auth_key = base64.standard_b64decode(s["auth_key"])
-            self._auth_key = AuthKey(data=auth_key)
-        except Exception as ex:
-            __log__.exception(ex.args)
+        s = self._unpack(s)
+        if s["dc_id"] != dc_id:
+            raise ValueError("Active DC does not match the saved session record.")
+        self._dc_id = dc_id
+        self._server_address = s["server_address"]
+        self._port = s["port"]
+        self._auth_key = AuthKey(data=base64.standard_b64decode(s["auth_key"]))
 
     def _update_sessions(self):
         """
@@ -122,9 +123,12 @@ class RedisSession(MemorySession):
                 "ts_str": time.strftime(DEFAULT_TS_STR_FORMAT, time.localtime()),
             })
 
-        key = "{}:sessions:{}".format(self.sess_prefix, self._dc_id)
+        key = f"{self.sess_prefix}:sessions:{self._dc_id}"
         try:
-            self.redis_connection.set(key, self._pack(s))
+            self.redis_connection.mset({
+                key: self._pack(s),
+                f"{self.sess_prefix}:active_dc": self._dc_id,
+            })
         except Exception as ex:
             __log__.exception(ex.args)
 
@@ -143,7 +147,7 @@ class RedisSession(MemorySession):
             self._auth_key = AuthKey(data=auth_key)
             return
 
-        key = "{}:sessions:{}".format(self.sess_prefix, self._dc_id)
+        key = f"{self.sess_prefix}:sessions:{self._dc_id}"
         s = self.redis_connection.get(key)
         if s:
             s = self._unpack(s)
@@ -160,9 +164,15 @@ class RedisSession(MemorySession):
 
     def list_sessions(self):
         """
-        Lists available sessions. Not used by the library itself.
+        Lists saved data-center IDs. Maintenance only; scans incrementally.
         """
-        return self._get_sessions(strip_prefix=True)
+        prefix = f"{self.sess_prefix}:sessions:"
+        pattern = "".join("\\" + c if c in "\\*?[]" else c for c in prefix) + "*"
+        sessions = self.redis_connection.scan_iter(match=pattern, count=1000)
+        return [
+            (key.decode() if isinstance(key, bytes) else key)[len(prefix):]
+            for key in sessions
+        ]
 
     def process_entities(self, tlo):
         """
@@ -179,7 +189,7 @@ class RedisSession(MemorySession):
 
         try:
             rows = rows[0]
-            key = "{}:entities:{}".format(self.sess_prefix, rows[0])
+            key = f"{self.sess_prefix}:entities:{rows[0]}"
             s = {
                 "id": rows[0],
                 "hash": rows[1],
@@ -203,7 +213,7 @@ class RedisSession(MemorySession):
         Returns list of entities. if strip_prefix is False - returns redis keys,
         else returns list of id's
         """
-        key_pattern = "{}:{}:entities:".format(self.hive_prefix, self.session_name)
+        key_pattern = f"{self.hive_prefix}:{self.session_name}:entities:"
         try:
             entities = self.redis_connection.keys(key_pattern+"*")
             if not strip_prefix:
@@ -213,18 +223,6 @@ class RedisSession(MemorySession):
             __log__.exception(ex.args)
             return []
 
-    def _get_sessions(self, strip_prefix=False):
-        """
-        Returns list of sessions. if strip_prefix is False - returns redis keys,
-        else returns list of id's
-        """
-        key_pattern = "{}:{}:sessions:".format(self.hive_prefix, self.session_name)
-        try:
-            sessions = self.redis_connection.keys(key_pattern+"*")
-            return [s.decode().replace(key_pattern, "") if strip_prefix else s.decode() for s in sessions]
-        except Exception as ex:
-            __log__.exception(ex.args)
-            return []
 
     def get_entity_rows_by_phone(self, phone):
         try:
@@ -259,7 +257,7 @@ class RedisSession(MemorySession):
 
     def get_entity_rows_by_id(self, entity_id, exact=True):
         if exact:
-            key = "{}:entities:{}".format(self.sess_prefix, entity_id)
+            key = f"{self.sess_prefix}:entities:{entity_id}"
             s = self.redis_connection.get(key)
             if not s:
                 return None
@@ -277,15 +275,18 @@ class RedisSession(MemorySession):
             )
 
             try:
-                for key in self._get_entities():
-                    entity = self._unpack(self.redis_connection.get(key))
+                keys = [f"{self.sess_prefix}:entities:{peer_id}" for peer_id in ids]
+                for value in self.redis_connection.mget(keys):
+                    if value is None:
+                        continue
+                    entity = self._unpack(value)
                     if "id" in entity and entity["id"] in ids:
                         return entity["id"], entity["hash"]
             except Exception as ex:
                 __log__.exception(ex.args)
 
     def get_file(self, md5_digest, file_size, cls):
-        key = "{}:sent_files:{}".format(self.sess_prefix, md5_digest)
+        key = f"{self.sess_prefix}:sent_files:{md5_digest}"
         s = self.redis_connection.get(key)
         if s:
             try:
@@ -299,9 +300,9 @@ class RedisSession(MemorySession):
 
     def cache_file(self, md5_digest, file_size, instance):
         if not isinstance(instance, (InputDocument, InputPhoto)):
-            raise TypeError('Cannot cache {} instance'.format(type(instance)))
+            raise TypeError(f'Cannot cache {type(instance)} instance')
 
-        key = "{}:sent_files:{}".format(self.sess_prefix, md5_digest)
+        key = f"{self.sess_prefix}:sent_files:{md5_digest}"
         s = {
             "md5_digest": md5_digest,
             "file_size": file_size,
