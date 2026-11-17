@@ -223,7 +223,6 @@ class RedisSession(MemorySession):
             __log__.exception(ex.args)
             return []
 
-
     def get_entity_rows_by_phone(self, phone):
         try:
             for key in self._get_entities():
