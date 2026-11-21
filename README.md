@@ -21,10 +21,10 @@ This installs this checkout and its development dependencies into `.venv`.
 After updating the checkout, run the same command. After deliberately changing
 dependencies, regenerate `uv.lock` with `uv lock`.
 
-To install this patched checkout in another uv-managed service:
+To install this package from PyPI in another uv-managed service:
 
 ```sh
-uv add /path/to/telethon-redis-session
+uv add telethon-redis
 ```
 
 ## Usage

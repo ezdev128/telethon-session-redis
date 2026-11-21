@@ -1,12 +1,12 @@
 [project]
-name = "teleredis"
+name = "telethon-redis"
 dynamic = ["version"]
 description = "Redis session storage for Telethon"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
-    { name = "Konstantin M." },
+    { name = "M4hbod" },
 ]
 dependencies = [
     "redis>=8.1.0",

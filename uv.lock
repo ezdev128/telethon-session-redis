@@ -74,7 +74,17 @@ wheels = [
 ]
 
 [[package]]
-name = "teleredis"
+name = "telethon"
+version = "1.31.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyaes" },
+    { name = "rsa" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/7f/3143354aee00dcac31644ed2ad67c1201ccb188c73b7e47e96689952b55f/Telethon-1.31.0.tar.gz", hash = "sha256:8c2a2e0398e329323bd6d2a6c1d3964f85e882d557144b77edb8ff969916ff5b", size = 555531, upload-time = "2023-10-12T16:46:46.99Z" }
+
+[[package]]
+name = "telethon-redis"
 source = { editable = "." }
 dependencies = [
     { name = "redis" },
@@ -94,16 +104,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "fakeredis", specifier = ">=2.0" }]
-
-[[package]]
-name = "telethon"
-version = "1.31.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyaes" },
-    { name = "rsa" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/7f/3143354aee00dcac31644ed2ad67c1201ccb188c73b7e47e96689952b55f/Telethon-1.31.0.tar.gz", hash = "sha256:8c2a2e0398e329323bd6d2a6c1d3964f85e882d557144b77edb8ff969916ff5b", size = 555531, upload-time = "2023-10-12T16:46:46.99Z" }
 
 [[package]]
 name = "typing-extensions"
