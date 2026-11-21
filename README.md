@@ -1,7 +1,9 @@
 # Telethon Redis session
 
 A Redis-backed session implementation for [Telethon](https://github.com/LonamiWebs/Telethon).
+
 Multiple accounts can share a Redis database; each account uses a distinct session name.
+
 
 ## Setup
 
@@ -151,3 +153,8 @@ uv build
 
 Package metadata and dependencies live in `pyproject.toml`; `uv.lock` records the
 resolved environment. The package version comes from `teleredis/__init__.py`.
+
+## Credits
+
+Based on [telethon-session-redis](https://github.com/ezdev128/telethon-session-redis)
+by [Konstantin M. (@ezdev128)](https://github.com/ezdev128).
